@@ -32,3 +32,22 @@ Experimental results on the **NEU-DET** dataset are shown below (DCMGA-YOLO achi
 | YOLO26 | 77.0 | 2.38 | 73.6 | 70.4 | 5.2 | **261.42** |
 | ADMA-YOLO | 80.4 | **1.14** | 69.4 | 75.1 | **3.7** | 208.6 |
 | **DCMGA-YOLO (Ours)** | **82.3** | **2.68** | **74.2** | **78.8** | **6.8** | **242.20** |
+
+---
+
+## Environment Setup
+
+* Deep Learning Framework: PyTorch
+* GPU: NVIDIA RTX 3090 with 24GB memory
+
+*(Note: You can add OS, Python version, and CUDA versions here if needed, similar to your screenshot)*
+
+## Training Parameters
+
+* Epochs: 300
+* Batch Size: 32
+* Initial Learning Rate: 0.01
+* Momentum: 0.937
+* Weight Decay: 0.0005
+* Optimizer: SGD
+* Data Augmentation: Mosaic
