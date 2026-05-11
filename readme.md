@@ -51,3 +51,15 @@ Experimental results on the **NEU-DET** dataset are shown below (DCMGA-YOLO achi
 * Weight Decay: 0.0005
 * Optimizer: SGD
 * Data Augmentation: Mosaic
+
+## 📈 Usage
+
+### Training
+```python
+from ultralytics import YOLO
+
+# Load DCMGA-YOLO model configuration
+model = YOLO("ultralytics/cfg/models/11/DCMGA-YOLO.yaml")
+
+# Start training
+model.train(data="your_dataset.yaml", epochs=300, imgsz=640, batch=32)
