@@ -1,13 +1,18 @@
 import warnings
 
-warnings.filterwarnings('ignore')
-warnings.simplefilter('ignore')
-import torch, cv2, os, shutil, copy
+warnings.filterwarnings("ignore")
+warnings.simplefilter("ignore")
+import copy
+import os
+import shutil
+
+import cv2
 import numpy as np
+import torch
 from PIL import Image
+from pytorch_grad_cam.utils.image import show_cam_on_image
+
 from ultralytics import YOLO
-from pytorch_grad_cam import GradCAMPlusPlus, GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image, scale_cam_image
 
 
 # -------------------------------------------------------------------------------------------
@@ -18,14 +23,14 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=False, strid
     if isinstance(new_shape, int):
         new_shape = (new_shape, new_shape)
     r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-    new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
+    new_unpad = round(shape[1] * r), round(shape[0] * r)
     dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]
     dw /= 2
     dh /= 2
     if shape[::-1] != new_unpad:
         im = cv2.resize(im, new_unpad, interpolation=cv2.INTER_LINEAR)
-    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+    top, bottom = round(dh - 0.1), round(dh + 0.1)
+    left, right = round(dw - 0.1), round(dw + 0.1)
     im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
     return im, (r, r), (top, bottom, left, right)
 
@@ -57,7 +62,7 @@ class ActivationsAndGradients:
         def _store_grad(grad):
             if self.reshape_transform is not None:
                 grad = self.reshape_transform(grad)
-            self.gradients = [grad.cpu().detach()] + self.gradients
+            self.gradients = [grad.cpu().detach(), *self.gradients]
 
         output.register_hook(_store_grad)
 
@@ -100,10 +105,11 @@ class yolo_detect_target(torch.nn.Module):
         num_to_process = int(post_result.size(0) * self.ratio)
         for i in range(num_to_process):
             val = post_result[i].max()
-            if float(val) < self.conf: break
-            if self.output_type in ['class', 'all']:
+            if float(val) < self.conf:
+                break
+            if self.output_type in ["class", "all"]:
                 result.append(val)
-            if self.output_type in ['box', 'all']:
+            if self.output_type in ["box", "all"]:
                 result.append(pre_post_boxes[i].sum())
         return sum(result) if result else torch.tensor(0.0, requires_grad=True)
 
@@ -139,12 +145,14 @@ class yolo_heatmap:
 
     def process(self, img_path, save_path):
         img_raw = cv2.imdecode(np.fromfile(img_path, np.uint8), cv2.IMREAD_COLOR)
-        if img_raw is None: return
+        if img_raw is None:
+            return
         h_orig, w_orig = img_raw.shape[:2]
 
         # 1. 预处理
-        img_box, _, (top, bottom, left, right) = letterbox(img_raw, new_shape=(self.img_size, self.img_size),
-                                                           auto=False)
+        img_box, _, (top, bottom, left, right) = letterbox(
+            img_raw, new_shape=(self.img_size, self.img_size), auto=False
+        )
         img_float = np.float32(cv2.cvtColor(img_box, cv2.COLOR_BGR2RGB)) / 255.0
         tensor = torch.from_numpy(img_float.transpose(2, 0, 1)).unsqueeze(0).to(self.device)
 
@@ -176,10 +184,12 @@ class yolo_heatmap:
         print(f"Success: {save_path} ({w_orig}x{h_orig})")
 
     def __call__(self, img_path, save_root):
-        if os.path.exists(save_root): shutil.rmtree(save_root)
+        if os.path.exists(save_root):
+            shutil.rmtree(save_root)
         os.makedirs(save_root, exist_ok=True)
-        files = [os.path.join(img_path, f) for f in os.listdir(img_path) if
-                 f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        files = [
+            os.path.join(img_path, f) for f in os.listdir(img_path) if f.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
         for f in files:
             self.process(f, os.path.join(save_root, os.path.basename(f)))
 
@@ -189,19 +199,19 @@ class yolo_heatmap:
 # -------------------------------------------------------------------------------------------
 def get_params():
     return {
-        'weight': r'D:\leo\ultralytics-main26\ultralytics-main\runs\detect\runs\end330\yolo262\weights\best.pt',
-        'device': 'cuda:0',
-        'method': 'GradCAMPlusPlus',  # 推荐 PlusPlus，梯度更平滑
-        'layer': [16, 19, 22],  # YOLO26 核心检测头层
-        'backward_type': 'all',
-        'conf_threshold': 0.2,
-        'ratio': 0.02,
-        'show_result': False,
-        'img_size': 640,
+        "weight": r"D:\leo\ultralytics-main26\ultralytics-main\runs\detect\runs\end330\yolo262\weights\best.pt",
+        "device": "cuda:0",
+        "method": "GradCAMPlusPlus",  # 推荐 PlusPlus，梯度更平滑
+        "layer": [16, 19, 22],  # YOLO26 核心检测头层
+        "backward_type": "all",
+        "conf_threshold": 0.2,
+        "ratio": 0.02,
+        "show_result": False,
+        "img_size": 640,
     }
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     params = get_params()
     engine = yolo_heatmap(**params)
-    engine(r'D:\qileo\last\image', r'D:\leo\ultralytics-main26\result26')
+    engine(r"D:\qileo\last\image", r"D:\leo\ultralytics-main26\result26")
